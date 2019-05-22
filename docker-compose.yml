@@ -1,0 +1,83 @@
+version: "3.7"
+services:
+
+  rabbit:
+    container_name: rabbit
+    image: rabbitmq:3.7.14-alpine
+    environment:
+      - "RABBITMQ_DEFAULT_USER=rabuser"
+      - "RABBITMQ_DEFAULT_PASS=rabpass"
+    ports:
+      - "5672"
+    networks:
+      - backend
+    restart: always
+
+  db:
+    container_name: db
+    build:
+      context: .
+      dockerfile: dockerfiles/pg
+    environment:
+      - "PG_DB_USER=appuser"
+      - "PG_DB_PASSWORD=supersecureapppass"
+      - "PG_DB_DATABASE=app"
+      - "POSTGRES_USER=postgres"
+      - "POSTGRES_PASSWORD=supersecureapppass"
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    ports:
+      - "5432"
+    networks:
+      - backend
+    restart: always
+
+  app:
+    container_name: app
+    build:
+      context: .
+      dockerfile: dockerfiles/app
+    networks:
+      - frontend
+      - backend
+    ports:
+      - "8000"
+    depends_on:
+      - worker
+      - db
+      - rabbit
+    restart: always
+
+  worker:
+    container_name: worker
+    build:
+      context: .
+      dockerfile: dockerfiles/worker
+    networks:
+      - frontend
+      - backend
+    depends_on:
+      - rabbit
+    restart: always
+
+  nginx:
+    container_name: nginx
+    image: nginx:1.16-alpine
+    networks:
+      - frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - app
+    volumes:
+      - ./shared/nginx:/etc/nginx/conf.d
+      - ./shared/certbot:/etc/nginx/ssl
+    restart: always
+
+networks:
+  frontend:
+  backend:
+
+volumes:
+   pg-data:

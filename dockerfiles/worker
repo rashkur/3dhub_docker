@@ -1,0 +1,11 @@
+FROM python:3.7-alpine
+
+RUN apk add --no-cache sed git postgresql-dev gcc libc-dev linux-headers python3-dev musl-dev && git clone https://github.com/3DHubs/service-example.git
+
+WORKDIR /service-example
+
+RUN sed -E -i "s/Celery\(\)/Celery\(broker='amqp:\/\/rabuser:rabpass@rabbit'\)/" worker.py
+
+RUN pip install -r requirements.txt
+
+CMD ["python", "worker.py"]

@@ -1,0 +1,16 @@
+FROM python:3.7-alpine
+
+RUN apk add --no-cache git postgresql-dev gcc libc-dev linux-headers python3-dev musl-dev && git clone https://github.com/3DHubs/service-example.git
+
+WORKDIR /service-example
+
+RUN sed -E -i "s/Celery\(\)/Celery\(broker='amqp:\/\/rabuser:rabpass@rabbit'\)/" worker.py
+RUN sed -E -i 's/postgresql\:\/\/example:example@localhost:5432\/example/postgresql\:\/\/appuser\:supersecureapppass\@db\:5432\/app/' models.py
+RUN sed -E -i 's/postgresql\:\/\/example:example@localhost\/example/postgresql\:\/\/appuser\:supersecureapppass\@db\:5432\/app/' alembic.ini
+
+RUN pip install -r requirements.txt
+RUN pip install alembic
+
+ADD ./dockerfiles/appinit .
+
+CMD [ "/bin/sh", "appinit.sh" ]
